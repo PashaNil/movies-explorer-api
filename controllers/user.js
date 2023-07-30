@@ -56,32 +56,24 @@ const createUser = (req, res, next) => {
   const {
     name, email, password,
   } = req.body;
-  return UserModel.findOne({ email })
-    .then(() => (
-      bcrypt.hash(password, SALT_ROUNDS, (error, hash) => (
-        UserModel.create({
-          name, email, password: hash,
+
+  return bcrypt.hash(password, SALT_ROUNDS, (error, hash) => (
+    UserModel.create({
+      name, email, password: hash,
+    })
+      .then(() => (
+        res.status(201).send({
+          name, email,
         })
-          .then(() => (
-            res.status(201).send({
-              name, email,
-            })
-          ))
-          .catch((err) => {
-            if (err.code === 11000) return next(new ConflictError('Такой пользователь уже существует'));
-            if (err instanceof mongoose.Error.ValidationError) {
-              return next(new BadRequestError(err.message));
-            }
-            return next(err);
-          })
       ))
-    ))
-    .catch((err) => {
-      if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return next(new BadRequestError('Переданы некорректные данные при создании пользователя'));
-      }
-      return next(err);
-    });
+      .catch((err) => {
+        if (err.code === 11000) return next(new ConflictError('Такой пользователь уже существует'));
+        if (err instanceof mongoose.Error.ValidationError) {
+          return next(new BadRequestError('Переданы некорректные данные при создании пользователя'));
+        }
+        return next(err);
+      })
+  ));
 };
 
 // Обновление информции профиля
@@ -94,6 +86,7 @@ const updateProfile = (req, res, next) => {
       res.status(200).send(user)
     ))
     .catch((err) => {
+      if (err.code === 11000) return next(new ConflictError('Такой пользователь уже существует'));
       if (err instanceof mongoose.Error.ValidationError) {
         return next(new BadRequestError('Переданы некорректные данные при обновлении профиля'));
       }
